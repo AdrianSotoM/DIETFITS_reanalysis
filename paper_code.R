@@ -421,7 +421,7 @@ gl_3m_trend <- ggscatterstats(
 )
 gl_3m_trend
 
-fig_2a_beta <- lm(delta_weight_3m~delta_GL_3m+scr_gender+bl_bmi+bl_cal+diet,
+fig_2a_beta <- lm(delta_weight_3m~z_delta_GL_3m+scr_gender+bl_bmi+bl_cal+diet,
                        data=data_3m)
 summary(fig_2a_beta)
 plot_fig_2a_beta <- ggcoefstats(fig_2a_beta)
@@ -438,7 +438,7 @@ cal_3m_trend <- ggscatterstats(
 )
 cal_3m_trend
 
-fig_2b_beta <- lm(delta_weight_3m~delta_cal_3m+scr_gender+bl_bmi+bl_cal+diet,
+fig_2b_beta <- lm(delta_weight_3m~z_delta_fatcals_3m+scr_gender+bl_bmi+bl_cal+diet,
                   data=data_3m)
 
 summary(fig_2b_beta)
@@ -458,7 +458,7 @@ lcd_adherence <- ggscatterstats(
 )
 lcd_adherence
 
-fig_3a_beta <- lm(delta_weight_3m~delta_carbcals_3m+scr_gender+bl_bmi+bl_cal,
+fig_3a_beta <- lm(delta_weight_3m~z_delta_carbcals_3m+scr_gender+bl_bmi+bl_cal,
                        data=data_lcd_3m)
 
 summary(fig_3a_beta)
@@ -477,7 +477,7 @@ lfd_adherence <- ggscatterstats(
 )
 lfd_adherence
 
-fig_3b_beta <- lm(delta_weight_3m~delta_fatcals_3m+scr_gender+bl_bmi+bl_cal,
+fig_3b_beta <- lm(delta_weight_3m~z_delta_fatcals_3m+scr_gender+bl_bmi+bl_cal,
                   data=data_lfd_3m)
 
 summary(fig_3b_beta)
@@ -498,7 +498,7 @@ tgtohdl_3m_trend <- ggscatterstats(
 )
 tgtohdl_3m_trend
 
-fig_4a_beta <- lm(delta_weight_3m~delta_tgtohdl_3m+scr_gender+bl_bmi+bl_cal+diet,
+fig_4a_beta <- lm(delta_weight_3m~z_delta_tgtohdl_3m+scr_gender+bl_bmi+bl_cal+diet,
                   data=data_3m)
 
 summary(fig_4a_beta)
@@ -517,7 +517,7 @@ ldlplushdl_3m_trend <- ggscatterstats(
 )
 ldlplushdl_3m_trend
 
-fig_4b_beta <- lm(delta_weight_3m~delta_ldlplushdl+scr_gender+bl_bmi+bl_cal+diet,
+fig_4b_beta <- lm(delta_weight_3m~z_delta_ldlplushdl+scr_gender+bl_bmi+bl_cal+diet,
                   data=data_3m)
 
 summary(fig_4b_beta)
@@ -592,13 +592,13 @@ dag <- dagify (
   glr ~ lowcarb,
   nutedu ~ lowcarb,
   nutedu ~ lowfat,
-  lowcarb ~ enrollment,
-  lowfat ~ enrollment,
+  lowcarb ~ enrolment,
+  lowfat ~ enrolment,
   outcome = "weightloss",
-  exposure = "enrollment",
+  exposure = "enrolment",
   labels = c(
               weightloss = "Weightloss",
-              enrollment = "DIETFITS enrollment",
+              enrollment = "DIETFITS enrolment",
               nutedu = "Nutritional education",
               enired="Energy intake reduction",
               glr="Glycemic load reduction",
