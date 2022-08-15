@@ -1,8 +1,16 @@
 #### SET UP ####
-#Data available at https://github.com/AdrianSotoM
-#Please, address all correspondence about this code to adrian.sotom@tec.mx
-#Also please, note that some graphs were edited in the paper to improve their
+# Data is openly available at DIETFITS' Open Science Framework repository.
+
+# Actually, this code downloads it automatically, you don't need to save the
+# data file in your computer.
+
+# Please, address all correspondence about this code to adrian.sotom@tec.mx
+# Also please, note that some graphs were edited in the paper to improve their
 #readability.
+
+# If you are only interested in corroborating our results and figures, just 
+# click "Ctrl + Shift + Enter" and go get a coffee. I programmed a funny sound 
+# to let you it finished running the whole code.
 
 #Working directory setup
 setwd("C:/Users/adria/Dropbox/UIEM/LEAD/Proyectos/DIETFITS")
@@ -18,7 +26,7 @@ setwd("C:/Users/adria/Dropbox/UIEM/LEAD/Proyectos/DIETFITS")
 #Packages setup
 pacman::p_load(dplyr,tidyr,ggstatsplot,readxl,tableone,easystats,dagitty,
                patchwork,MASS,see,qqplotr,bootStepAIC,performance,ggdag,
-               rpart,rpart.plot,gtools,broom,lmtest,visdat,report,
+               rpart,rpart.plot,gtools,broom,lmtest,visdat,report,beepr,
                parameters,ggcharts,conflicted,car,rattle,cvms,lavaan,
                mlogit,MLmetrics,beepr,readr,haven,dagitty,mediation)
 
@@ -30,7 +38,7 @@ conflict_prefer("filter", "dplyr")
 data <- read.csv(url("https://osf.io/ztysq/download"))
 #Participant 2001 will be excluded due to a likely erroneous lipid measurement.
 data <- data %>% filter(study_id != "2001")
-#############################################################################
+############################################################################
 ##### DATA FILTERING BY DIFFERENT TIMEPOINTS####
 data_bl <- data %>%  filter(redcap_event_name == "baseline_arm_1") %>% 
   select(id,baseline_ins,gluc,diet,redcap_event_name,scr_gender,
@@ -53,8 +61,8 @@ data_3m <- data %>% filter(redcap_event_name == "3_months_arm_1") %>%
          lipid_hdl_v2,MetSyn,cal,fat..,carb..,protein..,bmi,
          saturated_fat..,fiber.g,carb.g,fat.g,protein.g,
          GI_glucose,GL_glucose,added_sugars,sugar.cal,thirty_ins) %>% 
-  mutate(delta_weight_3m = ((data_bl$weight_gcrc - weight_gcrc)/data_bl$weight_gcrc)*100) %>% 
-  mutate(delta_weight_3m_2 = (data_bl$weight_gcrc - weight_gcrc)) %>% 
+  mutate(delta_weight_3m = (data_bl$weight_gcrc - weight_gcrc)) %>% 
+  mutate(delta_weight_3m_2 = ((data_bl$weight_gcrc - weight_gcrc)/data_bl$weight_gcrc)*100) %>% 
   mutate(qdelta_weight_3m = quantcut(delta_weight_3m,q=5)) %>% 
   mutate(bl_bmi = data_bl$bmi) %>% 
   mutate(bl_carb_cals = data_bl$bl_carb_cals) %>% 
@@ -116,8 +124,8 @@ data_6m <- data %>% filter(redcap_event_name == "6_months_arm_1") %>%
          lipid_hdl_v2,MetSyn,cal,fat..,carb..,protein..,bmi,
          saturated_fat..,fiber.g,carb.g,fat.g,protein.g,
          GI_glucose,GL_glucose,added_sugars,sugar.cal,thirty_ins) %>% 
-  mutate(delta_weight_6m = ((data_bl$weight_gcrc - weight_gcrc)/data_bl$weight_gcrc)*100) %>% 
-  mutate(delta_weight_6m_2 = (data_bl$weight_gcrc - weight_gcrc)) %>% 
+  mutate(delta_weight_6m = (data_bl$weight_gcrc - weight_gcrc)) %>% 
+  mutate(delta_weight_6m_2 = ((data_bl$weight_gcrc - weight_gcrc)/data_bl$weight_gcrc)*100) %>%
   mutate(qdelta_weight_6m = quantcut(delta_weight_6m,q=5)) %>% 
   mutate(bl_bmi = data_bl$bmi) %>% 
   mutate(bl_carb_cals = data_bl$bl_carb_cals) %>% 
@@ -179,8 +187,8 @@ data_12m <- data %>% filter(redcap_event_name == "12_months_arm_1") %>%
          lipid_hdl_v2,MetSyn,cal,fat..,carb..,protein..,bmi,
          saturated_fat..,fiber.g,carb.g,fat.g,protein.g,
          GI_glucose,GL_glucose,added_sugars,sugar.cal,thirty_ins) %>% 
-  mutate(delta_weight_12m = ((data_bl$weight_gcrc - weight_gcrc)/data_bl$weight_gcrc)*100) %>% 
-  mutate(delta_weight_12m_2 = (data_bl$weight_gcrc - weight_gcrc)) %>% 
+  mutate(delta_weight_12m = (data_bl$weight_gcrc - weight_gcrc)) %>% 
+  mutate(delta_weight_12m_2 = ((data_bl$weight_gcrc - weight_gcrc)/data_bl$weight_gcrc)*100) %>%
   mutate(qdelta_weight_12m = quantcut(delta_weight_12m,q=5)) %>% 
   mutate(bl_bmi = data_bl$bmi) %>% 
   mutate(bl_carb_cals = data_bl$bl_carb_cals) %>% 
@@ -277,7 +285,7 @@ w_3m_cal_adj_comp <- compare_performance(w_3m_adj_totcal,w_3m_adj_carbcal,
                                          w_3m_adj_satfat)
 w_3m_cal_adj_comp
 plot(w_3m_cal_adj_comp)
-ggsave("Fig1_Adjusted models. Baseline to 3m.tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("Fig1_Adjusted models. Baseline to 3m.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
 ############################################################################
 ##### FIGURE 2. Dietary Mediators #####
@@ -287,22 +295,33 @@ gl_3m_trend <- ggscatterstats(
   x     = z_delta_GL_3m,
   y     = delta_weight_3m,
   xlab  = "Glycemic load reduction (z-score)",
-  ylab  = "Weight reduction(%)",
-  title = "Weight reduction vs Glycemic Load reduction",
+  ylab  = "Weight reduction (kg)",
+  title = "A) Weight Reduction vs Glycemic Load Reduction",
+  subtitle = "ß = 6.0, p = 3.64 x 10^9",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
-) + 
+  ) + 
   ggplot2::scale_y_continuous(
   limits = c(-20,20),
   breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+                 ) +
+coord_cartesian(expand = F)
 gl_3m_trend
-ggsave("Fig2_A.Weight reduction vs Glycemic Load reduction.tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("Fig2_A.Weight reduction vs Glycemic Load reduction.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_2a_beta <- lm(delta_weight_3m~z_delta_GL_3m+scr_gender+bl_bmi+bl_cal+diet,
-                       data=data_3m)
+fig_2a_beta <- lm(delta_weight_3m~z_delta_GL_3m,data=data_3m)
 summary(fig_2a_beta)
 plot_fig_2a_beta <- ggcoefstats(fig_2a_beta)
 plot_fig_2a_beta
@@ -313,23 +332,33 @@ fatcal_3m_trend <- ggscatterstats(
   x     = z_delta_fatcals_3m,
   y     = delta_weight_3m,
   xlab  = "Calories from fat intake reduction (z-score)",
-  ylab  = "Weight reduction (%)",
-  title = "Weight reduction vs fat intake reduction",
+  ylab  = "Weight reduction (kg)",
+  title = "B) Weight Reduction vs Fat Intake Reduction",
+  subtitle = "ß = 1.75, p = 0.08",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 fatcal_3m_trend
-ggsave("Fig2_B.Weight reduction vs fat intake reduction.tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("Fig2_B.Weight reduction vs fat intake reduction.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_2b_beta <- lm(delta_weight_3m~z_delta_fatcals_3m+scr_gender+bl_bmi+bl_cal+diet,
-                  data=data_3m)
-
+fig_2b_beta <- lm(delta_weight_3m~z_delta_fatcals_3m,data=data_3m)
 summary(fig_2b_beta)
 beta_fig_2b_beta <- ggcoefstats(fig_2b_beta)
 beta_fig_2b_beta
@@ -342,22 +371,34 @@ lcd_adherence <- ggscatterstats(
   x     = z_delta_carbcals_3m,
   y     = delta_weight_3m,
   xlab  = "Calories form carbohydrate intake reduction (z-score)",
-  ylab  = "Weight reduction (%)",
-  title = "Weight reduction vs carbohydrate intake reduction in the LCD group",
+  ylab  = "Weight reduction (kg)",
+  title = "A) Weight Reduction vs Carbohydrate Reduction (LCD Group)",
+  subtitle = "ß = 6.22, p = 1.96 x 10^9",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 lcd_adherence
-ggsave("Fig3_A.Weight reduction vs carbohydrate intake reduction in the LCD group.tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("Fig3_A.Weight reduction vs carbohydrate intake reduction in the LCD group.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_3a_beta <- lm(delta_weight_3m~z_delta_carbcals_3m+scr_gender+bl_bmi+bl_cal,
-                       data=data_lcd_3m)
+fig_3a_beta <- lm(delta_weight_3m~z_delta_carbcals_3m,
+                  data=data_lcd_3m)
 
 summary(fig_3a_beta)
 
@@ -370,21 +411,33 @@ lfd_adherence <- ggscatterstats(
   x     = z_delta_fatcals_3m,
   y     = delta_weight_3m,
   xlab  = "Calories from fat intake reduction (z-score)",
-  ylab  = "Weight reduction (%)",
-  title = "Weight reduction vs fat intake reduction in the LFD group",
+  ylab  = "Weight reduction (kg)",
+  title = "B) Weight Reduction vs Fat Reduction (LFD Group)",
+  subtitle = "ß = 4.45, p = 1.26 x 10^5",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 lfd_adherence
-ggsave("Fig3_B.Weight reduction vs fat intake reduction in the LFD group.tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("Fig3_B.Weight reduction vs fat intake reduction in the LFD group.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_3b_beta <- lm(delta_weight_3m~z_delta_fatcals_3m+scr_gender+bl_bmi+bl_cal,
+fig_3b_beta <- lm(delta_weight_3m~z_delta_fatcals_3m,
                   data=data_lfd_3m)
 
 summary(fig_3b_beta)
@@ -400,22 +453,33 @@ tgtohdl_3m_trend <- ggscatterstats(
   x     = z_delta_tgtohdl_3m,
   y     = delta_weight_3m,
   xlab  = "TG/HDL reduction (z-score)",
-  ylab  = "Weight reduction (%)",
-  title = "Weight reduction vs TG to HDL reduction",
+  ylab  = "Weight reduction (kg)",
+  title = "A) Weight Reduction vs TG/HDL Reduction",
+  subtitle = "ß = 6.01, p = 3.51 x 10^9",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 tgtohdl_3m_trend
-ggsave("Fig4_A.Weight reduction vs TG to HDL reduction.tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("Fig4_A.Weight reduction vs TG to HDL reduction.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_4a_beta <- lm(delta_weight_3m~z_delta_tgtohdl_3m+scr_gender+bl_bmi+bl_cal+diet,
-                  data=data_3m)
+fig_4a_beta <- lm(delta_weight_3m~z_delta_tgtohdl_3m,data=data_3m)
 
 summary(fig_4a_beta)
 
@@ -428,22 +492,33 @@ ldlplushdl_3m_trend <- ggscatterstats(
   x     = z_delta_ldlplushdl,
   y     = delta_weight_3m,
   xlab  = "LDL + HDL reduction (z-score)",
-  ylab  = "Weight reduction (%)",
-  title = "Weight reduction vs LDL + HDL reduction",
+  ylab  = "Weight reduction (kg)",
+  title = "B) Weight Reduction vs LDL+HDL Reduction",
+  subtitle = "ß = 1.57, p = 0.12",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 ldlplushdl_3m_trend
-ggsave("Fig4_B.Weight reduction vs LDL + HDL reduction.tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("Fig4_B.Weight reduction vs LDL + HDL reduction.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_4b_beta <- lm(delta_weight_3m~z_delta_ldlplushdl+scr_gender+bl_bmi+bl_cal+diet,
-                  data=data_3m)
+fig_4b_beta <- lm(delta_weight_3m~z_delta_ldlplushdl,data=data_3m)
 
 summary(fig_4b_beta)
 
@@ -452,27 +527,34 @@ plot_fig_4b_beta
 
 ############################################################################
 ##### FIGURE 5. Effect Modification #####
-##### Panel A. Weight loss vs insulin at 30 min vs GL reduction #####
+##### Weight loss vs insulin at 30 min vs GL reduction #####
 w_3m_df_5q_gl <- aggregate(x=data_3m$delta_weight_3m,
                            by= list(data_3m$qdelta_GL,data_3m$qbl_30ins),
                            FUN=mean,na.rm=TRUE)
-colnames(w_3m_df_5q_gl) <- c("GL","qbl30min","weightloss")
+colnames(w_3m_df_5q_gl) <- c("GL","qbl30min","kg")
 
 w_3m_hmap_plot_5q <- ggplot(data=w_3m_df_5q_gl,aes(x=GL,y=qbl30min))+
-  geom_tile(aes(fill=weightloss))+
-  ggtitle("Weightloss by delta GL and qbl30min LFD")+
-  scale_y_discrete(name="Baseline insulin 30 quintile",breaks=waiver())+
-  scale_x_discrete(name="Change in Glycemic Load quintile",breaks=waiver())+
-  scale_fill_gradient(name="weightloss",low="#FC6B64",high="#6B77F8",n.breaks=10)+
-  geom_text(aes(GL,qbl30min,label=round(weightloss,3)),color="black",size=4)+
-  ggplot2::theme(text = element_text(size = 12),
-                 plot.title = element_text(size=20,face = "bold"),
-                 axis.title.x = element_text(size=16, colour = "black"),
-                 axis.title.y = element_text(size=16, colour = "black")
+  geom_tile(aes(fill=kg))+
+  ggtitle("Weight loss vs Glycemic Load Reduction and Baseline OGTT 30' insulin quintile",
+          subtitle = "3 month time point")+
+  scale_y_discrete(name="Baseline OGTT insulin 30' quintile",breaks=waiver())+
+  scale_x_discrete(name="Change in glycemic goad quintile",breaks=waiver())+
+  scale_fill_gradient(name="kg lost",low="#FC6B64",high="#6B77F8",n.breaks=5)+
+  geom_text(aes(GL,qbl30min,label=round(kg,1)),color="black",size=6)+
+  ggplot2::theme(plot.title = element_text(size=22,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.subtitle = element_text(size = 18, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
+                 plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
+                 axis.title.x = element_text(size=18, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
+                 axis.title.y = element_text(size=18, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
+                 axis.text = element_text(size=14, colour = "black"),
+                 legend.box.margin = margin(l=1,unit = "cm"),
+                 legend.title = element_text(size=18, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
+                 legend.text = element_text(size=14, colour = "black")
   )
 w_3m_hmap_plot_5q
-
-##### Panel B. Weight loss vs insulin at 30 min vs GL reduction #####
+ggsave("Fig5.Effect Modification 3-months.tiff", units="cm", width=35, height=35, dpi=600, compression = 'lzw')
+##### Weight loss vs insulin at 30 min vs GL reduction #####
 em <- lm(delta_weight_3m~bl30q5*deltaGLq5+diet,
          data=data_3m)
 summary(em)
@@ -558,7 +640,7 @@ w_12m_cal_adj_comp <- compare_performance(w_12m_adj_totcal,w_12m_adj_carbcal,
                                           w_12m_adj_satfat)
 w_12m_cal_adj_comp
 plot(w_12m_cal_adj_comp)
-ggsave("SupFig1_Adjusted models. Baseline to 12m.tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("SupFig1_Adjusted models. Baseline to 12m.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 ############################################################################
 ##### SUPPLEMENTAL FIGURE 2. Dietary Mediators (12-months) #####
 ##### Panel A. Glycemic load reduction vs weight loss #####
@@ -567,26 +649,38 @@ gl_12m_trend <- ggscatterstats(
   x     = z_delta_GL_12m,
   y     = delta_weight_12m,
   xlab  = "Glycemic load reduction (z-score)",
-  ylab  = "Weight change(%)",
-  title = "Weight change vs change in Glycemic Load",
+  ylab  = "Weight reduction (kg)",
+  title = "A) Weight Reduction vs Glycemic Load Reduction",
+  subtitle = "ß = -2.65, p = 8.25 x 10^3",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 gl_12m_trend
-ggsave("SupFig2_A.Weight reduction vs Glycemic Load reduction(12m).tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("SupFig2_A.Weight reduction vs Glycemic Load reduction(12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
 
-fig_2a_beta <- lm(delta_weight_12m~delta_GL_12m,
+supfig_2a_beta_12 <- lm(delta_weight_12m~delta_GL_12m,
                   data=data_12m)
-summary(fig_2a_beta)
-plot_fig_2a_beta <- ggcoefstats(fig_2a_beta)
-plot_fig_2a_beta
+summary(supfig_2a_beta_12)
+plot_supfig_2a_beta_12m <- ggcoefstats(supfig_2a_beta_12)
+plot_supfig_2a_beta_12m
 
 ##### Panel B. Fat intake reduction vs weight loss #####
 cal_12m_trend <- ggscatterstats(
@@ -594,27 +688,39 @@ cal_12m_trend <- ggscatterstats(
   x     = z_delta_fatcals_12m,
   y     = delta_weight_12m,
   xlab  = "Calories from fat reduction (z-score)",
-  ylab  = "Weight change (%)",
-  title = "Weight change vs fat intake reduction",
+  ylab  = "Weight reduction (kg)",
+  title = "B) Weight Reduction vs Fat Intake Reduction",
+  subtitle = "ß = -0.14, p = 0.89",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 cal_12m_trend
-ggsave("SupFig2_B.Weight reduction vs fat intake reduction (12m).tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("SupFig2_B.Weight reduction vs fat intake reduction (12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
 
-fig_2b_beta <- lm(delta_weight_12m~delta_fatcals_12m,
+supfig_2b_beta <- lm(delta_weight_12m~delta_fatcals_12m,
                   data=data_12m)
 
-summary(fig_2b_beta)
-beta_fig_2b_beta <- ggcoefstats(fig_2b_beta)
-beta_fig_2b_beta
+summary(supfig_2b_beta)
+beta_supfig_2b_beta <- ggcoefstats(supfig_2b_beta)
+beta_supfig_2b_beta
 
 ############################################################################
 ##### SUPPLEMENTAL FIGURE 3. Adherence measures (12-months) #####
@@ -624,27 +730,39 @@ lcd_adherence_12 <- ggscatterstats(
   x     = z_delta_carbcals_12m,
   y     = delta_weight_12m,
   xlab  = "Calories from carbohydrate intake reduction (z-score)",
-  ylab  = "Weight change (%)",
-  title = "Weight change vs change in carbohydrate intake in the LCD group",
+  ylab  = "Weight reduction (kg)",
+  title = "A) Weight Reduction vs Carbohydrate Reduction (LCD Group)",
+  subtitle = "ß = -2.27, p = 0.02",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 lcd_adherence_12
-ggsave("SupFig3_A.Weight reduction vs carbohydrate intake reduction in the LCD group (12m).tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("SupFig3_A.Weight reduction vs carbohydrate intake reduction in the LCD group (12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_3a_beta <- lm(delta_weight_12m~delta_carbcals_12m,
-                  data=data_12m)
+supfig_3a_beta <- lm(delta_weight_12m~delta_carbcals_12m,
+                  data=data_lcd_12m)
 
-summary(fig_3a_beta)
+summary(supfig_3a_beta)
 
-plot_fig_3a_beta <- ggcoefstats(fig_3a_beta)
-plot_fig_3a_beta
+plot_supfig_3a_beta <- ggcoefstats(supfig_3a_beta)
+plot_supfig_3a_beta
 
 ##### Panel B. Fat intake reduction vs weight loss in the LFD #####
 lfd_adherence_12 <- ggscatterstats(
@@ -652,28 +770,40 @@ lfd_adherence_12 <- ggscatterstats(
   x     = z_delta_fatcals_12m,
   y     = delta_weight_12m,
   xlab  = "Calories from fat intake reduction (z-score)",
-  ylab  = "Weight change (%)",
-  title = "Weight change vs change in fat intake in the LFD group",
+  ylab  = "Weight reduction (kg)",
+  title = "B) Weight Reduction vs Fat Reduction (LFD Group)",
+  subtitle = "ß = -2.65, p = 8.06 x 10^3",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 lfd_adherence_12
-ggsave("SupFig3_B.Weight reduction vs fat intake reduction in the LFD group (12m).tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("SupFig3_B.Weight reduction vs fat intake reduction in the LFD group (12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
 
-fig_3b_beta <- lm(delta_weight_12m~delta_fatcals_12m,
-                  data=data_12m)
+supfig_3b_beta <- lm(delta_weight_12m~delta_fatcals_12m,
+                  data=data_lfd_12m)
 
-summary(fig_3b_beta)
+summary(supfig_3b_beta)
 
-plot_fig_3b_beta <- ggcoefstats(fig_3b_beta)
-plot_fig_3b_beta
+plot_supfig_3b_beta <- ggcoefstats(supfig_3b_beta)
+plot_supfig_3b_beta
 
 ############################################################################
 ##### SUPPLEMENTAL FIGURE 4. Lipid Biomeasures (12-months) #####
@@ -683,28 +813,40 @@ tgtohdl_12m_trend <- ggscatterstats(
   x     = z_delta_tgtohdl_12m,
   y     = delta_weight_12m,
   xlab  = "Change in TG/HDL (z-score)",
-  ylab  = "Weight change (%)",
-  title = "Weight change vs Change in TG/HDL",
+  ylab  = "Weight reduction (kg)",
+  title = "A) Weight Reduction vs TG/HDL Reduction",
+  subtitle = "ß = -8.29, p = 1.44 x 10^15",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 tgtohdl_12m_trend
-ggsave("SupFig4_A.Weight reduction vs TG to HDL reduction (12m).tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("SupFig4_A.Weight reduction vs TG to HDL reduction (12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
 
-fig_4a_beta <- lm(delta_weight_12m~delta_tgtohdl_12m,
+supfig_4a_beta <- lm(delta_weight_12m~delta_tgtohdl_12m,
                   data=data_12m)
 
-summary(fig_4a_beta)
+summary(supfig_4a_beta)
 
-plot_fig_4a_beta <- ggcoefstats(fig_4a_beta)
-plot_fig_4a_beta
+plot_supfig_4a_beta <- ggcoefstats(supfig_4a_beta)
+plot_supfig_4a_beta
 
 ##### Panel B. Reduction of LDL+HDL vs weight loss #####
 ldlplushdl_12m_trend <- ggscatterstats(
@@ -712,51 +854,71 @@ ldlplushdl_12m_trend <- ggscatterstats(
   x     = z_delta_ldlplushdl,
   y     = delta_weight_12m,
   xlab  = "Change in LDL + HDL (z-score)",
-  ylab  = "Weight change (%)",
-  title = "Weight change vs change in LDL + HDL",
+  ylab  = "Weight reduction (kg)",
+  title = "B) Weight Reduction vs LDL+HDL Reduction",
+  subtitle = "ß = 0.93, p = 0.35",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 ldlplushdl_12m_trend
-ggsave("SupFig4_B.Weight reduction vs LDL + HDL reduction(12m).tiff", units="cm", width=24, height=24, dpi=600, compression = 'lzw')
+ggsave("SupFig4_B.Weight reduction vs LDL + HDL reduction(12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_4b_beta <- lm(delta_weight_12m~delta_ldlplushdl,
+supfig_4b_beta <- lm(delta_weight_12m~delta_ldlplushdl,
                   data=data_12m)
 
-summary(fig_4b_beta)
+summary(supfig_4b_beta)
 
-plot_fig_4b_beta <- ggcoefstats(fig_4b_beta)
-plot_fig_4b_beta
+plot_supfig_4b_beta <- ggcoefstats(supfig_4b_beta)
+plot_supfig_4b_beta
 
 ############################################################################
 ##### SUPPLEMENTAL FIGURE 5. Effect Modification (12-months) #####
-##### Panel A. Weight loss vs insulin at 30 min vs GL reduction #####
+##### Weight loss vs insulin at 30 min vs GL reduction #####
 w_12m_df_5q_gl <- aggregate(x=data_12m$delta_weight_12m,
                             by= list(data_12m$qdelta_GL,data_12m$qbl_30ins),
                             FUN=mean,na.rm=TRUE)
-colnames(w_12m_df_5q_gl) <- c("GL","qbl30min","weightloss")
+colnames(w_12m_df_5q_gl) <- c("GL","qbl30min","kg")
 
 w_12m_hmap_plot_5q <- ggplot(data=w_12m_df_5q_gl,aes(x=GL,y=qbl30min))+
-  geom_tile(aes(fill=weightloss))+
-  ggtitle("Weightloss by delta GL and qbl30min LFD")+
-  scale_y_discrete(name="Baseline insulin 30 quintile",breaks=waiver())+
-  scale_x_discrete(name="Change in Glycemic Load quintile",breaks=waiver())+
-  scale_fill_gradient(name="weightloss",low="#FC6B64",high="#6B77F8",n.breaks=10)+
-  geom_text(aes(GL,qbl30min,label=round(weightloss,1)),color="black",size=4)+
-  ggplot2::theme(text = element_text(size = 12),
-                 plot.title = element_text(size=20,face = "bold"),
-                 axis.title.x = element_text(size=16, colour = "black"),
-                 axis.title.y = element_text(size=16, colour = "black")
+  geom_tile(aes(fill=kg))+
+  ggtitle("Weight loss vs Glycemic Load Reduction and Baseline OGTT 30' insulin quintile",
+          subtitle = "12 month time point")+
+  scale_y_discrete(name="Baseline OGTT insulin 30' quintile",breaks=waiver())+
+  scale_x_discrete(name="Change in glycemic goad quintile",breaks=waiver())+
+  scale_fill_gradient(name="kg lost",low="#FC6B64",high="#6B77F8",n.breaks=5)+
+  geom_text(aes(GL,qbl30min,label=round(kg,1)),color="black",size=6)+
+  ggplot2::theme(plot.title = element_text(size=22,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.subtitle = element_text(size = 18, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
+                 plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
+                 axis.title.x = element_text(size=18, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
+                 axis.title.y = element_text(size=18, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
+                 axis.text = element_text(size=14, colour = "black"),
+                 legend.box.margin = margin(l=1,unit = "cm"),
+                 legend.title = element_text(size=18, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
+                 legend.text = element_text(size=14, colour = "black")
   )
 w_12m_hmap_plot_5q
+ggsave("SupFig5.Effect Modification 12-months.tiff", units="cm", width=35, height=35, dpi=600, compression = 'lzw')
 
-##### Panel B. Weight loss vs insulin at 30 min vs GL reduction #####
+##### Weight loss vs insulin at 30 min vs GL reduction #####
 em12 <- lm(delta_weight_12m~bl30q5*deltaGLq5+diet+bl_bmi+bl_cal,
          data=data_12m)
 summary(em12)
@@ -765,7 +927,7 @@ em_betas12
 
 ############################################################################
 ############################################################################
-######### WEIGHT LOSS AS THE DIFFERENCE IN KG FROM BASELINE ################
+######### WEIGHT LOSS AS THE % DIFFERENCE FROM BASELINE ###################
 ############################################################################
 ############################################################################
 ##### FIGURE 1 Weight loss (Def2) #####
@@ -797,6 +959,7 @@ w_3m_cal_adj_comp_2 <- compare_performance(w_3m_adj_totcal_2,w_3m_adj_carbcal_2,
                                          w_3m_adj_satfat_2)
 w_3m_cal_adj_comp_2
 plot(w_3m_cal_adj_comp_2)
+ggsave("Def2_Fig1_Adjusted models. Baseline to 3m.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 ############################################################################
 ##### FIGURE 2. Dietary Mediators (Def2) #####
 ##### Panel A. Glycemic load reduction vs weight loss #####
@@ -807,22 +970,36 @@ gl_3m_trend_2 <- ggscatterstats(
   xlab  = "GL reduction (z-score)",
   ylab  = "Weight reduction(%)",
   title = "Weight reduction vs Glycemic Load reduction",
+  subtitle = "ß = 6.08, p = 2.35 x 10^9",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 gl_3m_trend_2
+ggsave("Def2_Fig2_A.Weight reduction vs Glycemic Load reduction.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_2a_beta_2 <- lm(delta_weight_3m_2~z_delta_GL_3m+scr_gender+bl_bmi+bl_cal+diet,
+
+d2fig_2a_beta_2 <- lm(delta_weight_3m_2~z_delta_GL_3m,
                   data=data_3m)
-summary(fig_2a_beta_2)
-plot_fig_2a_beta_2 <- ggcoefstats(fig_2a_beta_2)
-plot_fig_2a_beta_2
+summary(d2fig_2a_beta_2)
+d2plot_fig_2a_beta_2 <- ggcoefstats(d2fig_2a_beta_2)
+d2plot_fig_2a_beta_2
 
 ##### Panel B. Fat intake reduction vs weight loss #####
 fatcal_3m_trend_2 <- ggscatterstats(
@@ -832,23 +1009,36 @@ fatcal_3m_trend_2 <- ggscatterstats(
   xlab  = "Fat intake reduction (total calories z-score)",
   ylab  = "Weight reduction (%)",
   title = "Weight reduction vs fat intake reduction",
+  subtitle = "ß = 0.54, p = 0.59",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 fatcal_3m_trend_2
+ggsave("Def2_Fig2_B.Weight reduction vs fat intake reduction.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_2b_beta_2 <- lm(delta_weight_3m_2~z_delta_fatcals_3m+scr_gender+bl_bmi+bl_cal+diet,
+d2fig_2b_beta_2 <- lm(delta_weight_3m_2~z_delta_fatcals_3m,
                   data=data_3m)
 
-summary(fig_2b_beta_2)
-beta_fig_2b_beta_2 <- ggcoefstats(fig_2b_beta_2)
-beta_fig_2b_beta_2
+summary(d2fig_2b_beta_2)
+d2beta_fig_2b_beta_2 <- ggcoefstats(d2fig_2b_beta_2)
+d2beta_fig_2b_beta_2
 
 ############################################################################
 ##### FIGURE 3. Adherence measures (Def2) #####
@@ -860,24 +1050,38 @@ lcd_adherence_2 <- ggscatterstats(
   xlab  = "Carbohydrate intake reduction (z-score)",
   ylab  = "Weight reduction (%)",
   title = "Weight reduction vs carbohydrate intake reduction in the LCD group",
+  subtitle = "ß = 5.79, p = 2 x 10^8",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 lcd_adherence_2
+ggsave("Def2_Fig3_A.Weight reduction vs carbohydrate intake reduction in the LCD group.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_3a_beta_2 <- lm(delta_weight_3m_2~z_delta_carbcals_3m+scr_gender+bl_bmi+bl_cal,
+
+d2fig_3a_beta_2 <- lm(delta_weight_3m_2~z_delta_carbcals_3m,
                   data=data_lcd_3m)
 
-summary(fig_3a_beta_2)
+summary(d2fig_3a_beta_2)
 
-plot_fig_3a_beta_2 <- ggcoefstats(fig_3a_beta_2)
-plot_fig_3a_beta_2
+d2plot_fig_3a_beta_2 <- ggcoefstats(d2fig_3a_beta_2)
+d2plot_fig_3a_beta_2
 
 ##### Panel B. Fat intake reduction vs weight loss in the LFD #####
 lfd_adherence_2 <- ggscatterstats(
@@ -887,24 +1091,37 @@ lfd_adherence_2 <- ggscatterstats(
   xlab  = "Fat intake reduction (z-score)",
   ylab  = "Weight reduction (%)",
   title = "Weight reduction vs fat intake reduction in the LFD group",
+  subtitle = "ß = 3.46, p = 6.35 x 10^4",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 lfd_adherence_2
+ggsave("Def2_Fig3_B.Weight reduction vs fat intake reduction in the LFD group.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_3b_beta_2 <- lm(delta_weight_3m_2~z_delta_fatcals_3m+scr_gender+bl_bmi+bl_cal,
+d2fig_3b_beta_2 <- lm(delta_weight_3m_2~z_delta_fatcals_3m,
                   data=data_lfd_3m)
 
-summary(fig_3b_beta_2)
+summary(d2fig_3b_beta_2)
 
-plot_fig_3b_beta_2 <- ggcoefstats(fig_3b_beta_2)
-plot_fig_3b_beta_2
+d2plot_fig_3b_beta_2 <- ggcoefstats(d2fig_3b_beta_2)
+d2plot_fig_3b_beta_2
 
 ############################################################################
 ##### FIGURE 4. Lipid Biomeasures (Def2) #####
@@ -916,24 +1133,37 @@ tgtohdl_3m_trend_2 <- ggscatterstats(
   xlab  = "TG/HDL reduction (z-score)",
   ylab  = "Weight reduction (%)",
   title = "Weight reduction vs TG to HDL reduction",
+  subtitle = "ß = 6.13, p = 1.77 x 10^9",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 tgtohdl_3m_trend_2
+ggsave("Def2_Fig4_A.Weight reduction vs TG to HDL reduction.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_4a_beta_2 <- lm(delta_weight_3m_2~z_delta_tgtohdl_3m+scr_gender+bl_bmi+bl_cal+diet,
+d2fig_4a_beta_2 <- lm(delta_weight_3m_2~z_delta_tgtohdl_3m,
                   data=data_3m)
 
-summary(fig_4a_beta_2)
+summary(d2fig_4a_beta_2)
 
-plot_fig_4a_beta_2 <- ggcoefstats(fig_4a_beta_2)
-plot_fig_4a_beta_2
+d2plot_fig_4a_beta_2 <- ggcoefstats(d2fig_4a_beta_2)
+d2plot_fig_4a_beta_2
 
 ##### Panel B. Reduction of LDL+HDL vs weight loss #####
 ldlplushdl_3m_trend_2 <- ggscatterstats(
@@ -943,28 +1173,42 @@ ldlplushdl_3m_trend_2 <- ggscatterstats(
   xlab  = "LDL + HDL reduction (z-score)",
   ylab  = "Weight reduction (%)",
   title = "Weight reduction vs LDL + HDL reduction",
+  subtitle = "ß = 1.26, p = 0.21",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 ldlplushdl_3m_trend_2
+ggsave("Def2_Fig4_B.Weight reduction vs LDL + HDL reduction.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_4b_beta_2 <- lm(delta_weight_3m_2~z_delta_ldlplushdl+scr_gender+bl_bmi+bl_cal+diet,
+
+d2fig_4b_beta_2 <- lm(delta_weight_3m_2~z_delta_ldlplushdl,
                   data=data_3m)
 
-summary(fig_4b_beta_2)
+summary(d2fig_4b_beta_2)
 
-plot_fig_4b_beta_2 <- ggcoefstats(fig_4b_beta_2)
-plot_fig_4b_beta_2
+d2plot_fig_4b_beta_2 <- ggcoefstats(d2fig_4b_beta_2)
+d2plot_fig_4b_beta_2
 
 ############################################################################
 ##### FIGURE 5. Effect Modification (Def2) #####
-##### Panel A. Weight loss vs insulin at 30 min vs GL reduction #####
+##### Weight loss vs insulin at 30 min vs GL reduction #####
 w_3m_df_5q_gl_2 <- aggregate(x=data_3m$delta_weight_3m_2,
                            by= list(data_3m$qdelta_GL,data_3m$qbl_30ins),
                            FUN=mean,na.rm=TRUE)
@@ -972,19 +1216,27 @@ colnames(w_3m_df_5q_gl_2) <- c("GL","qbl30min","weightloss")
 
 w_3m_hmap_plot_5q_2 <- ggplot(data=w_3m_df_5q_gl_2,aes(x=GL,y=qbl30min))+
   geom_tile(aes(fill=weightloss))+
-  ggtitle("Weightloss by delta GL and qbl30min LFD")+
-  scale_y_discrete(name="Baseline insulin 30 quintile",breaks=waiver())+
-  scale_x_discrete(name="Change in Glycemic Load quintile",breaks=waiver())+
-  scale_fill_gradient(name="weightloss",low="#FC6B64",high="#6B77F8",n.breaks=10)+
-  geom_text(aes(GL,qbl30min,label=round(weightloss,3)),color="black",size=4)+
-  ggplot2::theme(text = element_text(size = 12),
-                 plot.title = element_text(size=20,face = "bold"),
-                 axis.title.x = element_text(size=16, colour = "black"),
-                 axis.title.y = element_text(size=16, colour = "black")
+  ggtitle("Weight loss vs Glycemic Load Reduction and Baseline OGTT 30' insulin quintile",
+          subtitle = "3 month time point")+
+  scale_y_discrete(name="Baseline OGTT insulin 30' quintile",breaks=waiver())+
+  scale_x_discrete(name="Change in glycemic goad quintile",breaks=waiver())+
+  scale_fill_gradient(name="% change",low="#FC6B64",high="#6B77F8",n.breaks=5)+
+  geom_text(aes(GL,qbl30min,label=round(weightloss,1)),color="black",size=6)+
+  ggplot2::theme(plot.title = element_text(size=22,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.subtitle = element_text(size = 18, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
+                 plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
+                 axis.title.x = element_text(size=18, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
+                 axis.title.y = element_text(size=18, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
+                 axis.text = element_text(size=14, colour = "black"),
+                 legend.box.margin = margin(l=1,unit = "cm"),
+                 legend.title = element_text(size=18, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
+                 legend.text = element_text(size=14, colour = "black")
   )
 w_3m_hmap_plot_5q_2
+ggsave("Def2_Fig5.Effect Modification 3-months.tiff", units="cm", width=35, height=35, dpi=600, compression = 'lzw')
 
-##### Panel B. Weight loss vs insulin at 30 min vs GL reduction #####
+##### Weight loss vs insulin at 30 min vs GL reduction #####
 em_2 <- lm(delta_weight_3m_2~bl30q5*deltaGLq5+diet,
          data=data_3m)
 summary(em_2)
@@ -1071,6 +1323,7 @@ w_12m_cal_adj_comp_2 <- compare_performance(w_12m_adj_totcal_2,w_12m_adj_carbcal
                                           w_12m_adj_satfat_2)
 w_12m_cal_adj_comp_2
 plot(w_12m_cal_adj_comp_2)
+ggsave("Def2_SupFig1_Adjusted models. Baseline to 12m.tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 ############################################################################
 ##### SUPPLEMENTAL FIGURE 2. Dietary Mediators (12-months) (Def2) #####
 ##### Panel A. Glycemic load reduction vs weight loss (Def2) #####
@@ -1081,23 +1334,36 @@ gl_12m_trend_2 <- ggscatterstats(
   xlab  = "GL reduction (z-score)",
   ylab  = "Weight change(kg)",
   title = "Weight change vs change in Glycemic Load",
+  subtitle = "ß = -2.73, p = 6.53 x 10^3",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 gl_12m_trend_2
+ggsave("Def2_SupFig2_A.Weight reduction vs Glycemic Load reduction(12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_2a_beta_2 <- lm(delta_weight_12m_2~delta_GL_12m,
-                  data=data_12m)
-summary(fig_2a_beta_2)
+d2supfig_2a_beta_2 <- lm(delta_weight_12m_2~delta_GL_12m,
+                    data=data_12m)
+summary(d2supfig_2a_beta_2)
 
-plot_fig_2a_beta_2 <- ggcoefstats(fig_2a_beta_2)
-plot_fig_2a_beta_2
+d2plot_supfig_2a_beta_2 <- ggcoefstats(d2supfig_2a_beta_2)
+d2plot_supfig_2a_beta_2
 
 ##### Panel B. Fat intake reduction vs weight loss (Def2) #####
 cal_12m_trend_2 <- ggscatterstats(
@@ -1107,24 +1373,37 @@ cal_12m_trend_2 <- ggscatterstats(
   xlab  = "Calories from fat reduction (z-score)",
   ylab  = "Weight change (kg)",
   title = "Weight change vs fat intake reduction",
+  subtitle = "ß = 0.71, p = 0.48",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 cal_12m_trend_2
+ggsave("Def2_SupFig2_B.Weight reduction vs fat intake reduction (12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_2b_beta_2 <- lm(delta_weight_12m_2~delta_fatcals_12m,
-                  data=data_12m)
+d2supfig_2b_beta_2 <- lm(delta_weight_12m_2~delta_fatcals_12m,
+                    data=data_12m)
 
-summary(fig_2b_beta_2)
+summary(d2supfig_2b_beta_2)
 
-beta_fig_2b_beta_2 <- ggcoefstats(fig_2b_beta_2)
-beta_fig_2b_beta_2
+d2beta_supfig_2b_beta_2 <- ggcoefstats(d2supfig_2b_beta_2)
+d2beta_supfig_2b_beta_2
 
 ############################################################################
 ##### SUPPLEMENTAL FIGURE 3. Adherence measures (12-months) (Def2) #####
@@ -1136,24 +1415,37 @@ lcd_adherence_12_2 <- ggscatterstats(
   xlab  = "Change in carbohydrate intake (z-score)",
   ylab  = "Weight change (kg)",
   title = "Weight change vs change in carbohydrate intake in the LCD group",
+  subtitle = "ß = -2.25, p = 0.03",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 lcd_adherence_12_2
+ggsave("Def2_SupFig3_A.Weight reduction vs carbohydrate intake reduction in the LCD group (12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_3a_beta_2 <- lm(delta_weight_12m_2~delta_carbcals_12m,
-                  data=data_12m)
+d2supfig_3a_beta_2 <- lm(delta_weight_12m_2~delta_carbcals_12m,
+                    data=data_lcd_12m)
 
-summary(fig_3a_beta_2)
+summary(d2supfig_3a_beta_2)
 
-plot_fig_3a_beta_2 <- ggcoefstats(fig_3a_beta_2)
-plot_fig_3a_beta_2
+d2plot_supfig_3a_beta_2 <- ggcoefstats(d2supfig_3a_beta_2)
+d2plot_supfig_3a_beta_2
 
 ##### Panel B. Fat intake reduction vs weight loss in the LFD (Def2) #####
 lfd_adherence_12_2 <- ggscatterstats(
@@ -1163,24 +1455,37 @@ lfd_adherence_12_2 <- ggscatterstats(
   xlab  = "Change in fat intake (z-score)",
   ylab  = "Weight change (kg)",
   title = "Weight change vs change in fat intake in the LFD group",
+  subtitle = "ß = -2.0, p = 0.05",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 lfd_adherence_12_2
+ggsave("Def2_SupFig3_B.Weight reduction vs fat intake reduction in the LFD group (12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_3b_beta_2 <- lm(delta_weight_12m_2~delta_fatcals_12m,
-                  data=data_12m)
+d2supfig_3b_beta_2 <- lm(delta_weight_12m_2~delta_fatcals_12m,
+                    data=data_lfd_12m)
 
-summary(fig_3b_beta_2)
+summary(d2supfig_3b_beta_2)
 
-plot_fig_3b_beta_2 <- ggcoefstats(fig_3b_beta_2)
-plot_fig_3b_beta_2
+d2plot_supfig_3b_beta_2 <- ggcoefstats(d2supfig_3b_beta_2)
+d2plot_supfig_3b_beta_2
 
 ############################################################################
 ##### SUPPLEMENTAL FIGURE 4. Lipid Biomeasures (12-months) (Def2) #####
@@ -1192,24 +1497,37 @@ tgtohdl_12m_trend_2 <- ggscatterstats(
   xlab  = "Change in TG/HDL (z-score)",
   ylab  = "Weight change (kg)",
   title = "Weight change vs Change in TG/HDL",
+  subtitle = "ß = -8.41, p = 6.0 x 10^16",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 tgtohdl_12m_trend_2
+ggsave("Def2_SupFig4_A.Weight reduction vs TG to HDL reduction (12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_4a_beta_2 <- lm(delta_weight_12m_2~delta_tgtohdl_12m,
-                  data=data_12m)
+d2supfig_4a_beta_2 <- lm(delta_weight_12m_2~delta_tgtohdl_12m,
+                    data=data_12m)
 
-summary(fig_4a_beta_2)
+summary(d2supfig_4a_beta_2)
 
-plot_fig_4a_beta_2 <- ggcoefstats(fig_4a_beta_2)
-plot_fig_4a_beta_2
+d2plot_fig_4a_beta_2 <- ggcoefstats(d2supfig_4a_beta_2)
+d2plot_fig_4a_beta_2
 
 ##### Panel B. Reduction of LDL+HDL vs weight loss (Def2) #####
 ldlplushdl_12m_trend_2 <- ggscatterstats(
@@ -1219,28 +1537,41 @@ ldlplushdl_12m_trend_2 <- ggscatterstats(
   xlab  = "Change in LDL + HDL (z-score)",
   ylab  = "Weight change (kg)",
   title = "Weight change vs change in LDL + HDL",
+  subtitle = "ß = 0.7, p = 0.49",
+  caption = "12 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
   ggplot2::scale_y_continuous(
     limits = c(-20,20),
     breaks = seq(-20, 20, by= 10))+
-  ggplot2::theme(text = element_text(size = 16),
-                 plot.title = element_text(size=24,face = "bold"),
-                 axis.title.y = element_text(size=16,colour = "black"))
+  ggplot2::scale_x_continuous(
+    limits = c(-3,3),
+    breaks = seq(-3, 3, by= 1))+
+  ggplot2::theme(plot.title = element_text(size=24,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.margin = margin(1,1,1,1,unit="cm"),
+                 axis.title.y = element_text(size=20,colour = "black",face="bold",margin = margin(r=1,unit="cm")),
+                 axis.title.x = element_text(size=20,colour = "black",face="bold",margin = margin(t=1,unit="cm")),
+                 axis.text = element_text(size=16,colour = "black"),
+                 plot.subtitle = element_text(size=20,colour = "blue",face="bold",hjust = 0.5,margin = margin(b=1,unit="cm")),
+                 plot.caption = element_text(size=18,colour="gray40",face="bold.italic",hjust = 1,margin = margin(t=0.5,unit="cm"))
+  ) +
+  coord_cartesian(expand = F)
 ldlplushdl_12m_trend_2
+ggsave("Def2_SupFig4_B.Weight reduction vs LDL + HDL reduction(12m).tiff", units="cm", width=30, height=30, dpi=600, compression = 'lzw')
 
-fig_4b_beta_2 <- lm(delta_weight_12m_2~delta_ldlplushdl,
+d2supfig_4b_beta_2 <- lm(delta_weight_12m_2~delta_ldlplushdl,
                   data=data_12m)
 
-summary(fig_4b_beta_2)
+summary(d2supfig_4b_beta_2)
 
-plot_fig_4b_beta_2 <- ggcoefstats(fig_4b_beta_2)
-plot_fig_4b_beta_2
+d2plot_fig_4b_beta_2 <- ggcoefstats(d2supfig_4b_beta_2)
+d2plot_fig_4b_beta_2
 
 ############################################################################
 ##### SUPPLEMENTAL FIGURE 5. Effect Modification (12-months) (Def2) #####
-##### Panel A. Weight loss vs insulin at 30 min vs GL reduction (Def2) #####
+##### Weight loss vs insulin at 30 min vs GL reduction (Def2) #####
 w_12m_df_5q_gl_2 <- aggregate(x=data_12m$delta_weight_12m_2,
                             by= list(data_12m$qdelta_GL,data_12m$qbl_30ins),
                             FUN=mean,na.rm=TRUE)
@@ -1248,22 +1579,32 @@ colnames(w_12m_df_5q_gl_2) <- c("GL","qbl30min","weightloss")
 
 w_12m_hmap_plot_5q_2 <- ggplot(data=w_12m_df_5q_gl_2,aes(x=GL,y=qbl30min))+
   geom_tile(aes(fill=weightloss))+
-  ggtitle("Weightloss by delta GL and qbl30min LFD")+
-  scale_y_discrete(name="Baseline insulin 30 quintile",breaks=waiver())+
-  scale_x_discrete(name="Change in Glycemic Load quintile",breaks=waiver())+
-  scale_fill_gradient(name="weightloss",low="#FC6B64",high="#6B77F8",n.breaks=10)+
-  geom_text(aes(GL,qbl30min,label=round(weightloss,1)),color="black",size=4)+
-  ggplot2::theme(text = element_text(size = 12),
-                 plot.title = element_text(size=20,face = "bold"),
-                 axis.title.x = element_text(size=16, colour = "black"),
-                 axis.title.y = element_text(size=16, colour = "black")
+  ggtitle("Weight loss vs Glycemic Load Reduction and Baseline OGTT 30' insulin quintile",
+          subtitle = "12 month time point")+
+  scale_y_discrete(name="Baseline OGTT insulin 30' quintile",breaks=waiver())+
+  scale_x_discrete(name="Change in glycemic goad quintile",breaks=waiver())+
+  scale_fill_gradient(name="% change",low="#FC6B64",high="#6B77F8",n.breaks=5)+
+  geom_text(aes(GL,qbl30min,label=round(weightloss,1)),color="black",size=6)+
+  ggplot2::theme(plot.title = element_text(size=22,face = "bold"),
+                 plot.title.position = "plot",
+                 plot.subtitle = element_text(size = 18, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
+                 plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
+                 axis.title.x = element_text(size=18, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
+                 axis.title.y = element_text(size=18, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
+                 axis.text = element_text(size=14, colour = "black"),
+                 legend.box.margin = margin(l=1,unit = "cm"),
+                 legend.title = element_text(size=18, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
+                 legend.text = element_text(size=14, colour = "black")
   )
 w_12m_hmap_plot_5q_2
+ggsave("Def2_SupFig5.Effect Modification 12-months.tiff", units="cm", width=35, height=35, dpi=600, compression = 'lzw')
 
-##### Panel B. Weight loss vs insulin at 30 min vs GL reduction (Def2) #####
+##### Weight loss vs insulin at 30 min vs GL reduction (Def2) #####
 em_12m_2 <- lm(delta_weight_12m_2~bl30q5*deltaGLq5+diet+bl_bmi+bl_cal,
          data=data_12m)
 summary(em_12m_2)
 
 em_12m_betas_2 <- ggcoefstats(em_12m_2)
 em_12m_betas_2
+#########################LETTING YOU KNOW IT FINISHED#######################
+beep(8)
