@@ -374,7 +374,7 @@ lcd_adherence <- ggscatterstats(
   ylab  = "Weight reduction (kg)",
   title = "A) Weight Reduction vs Carbohydrate Reduction (LCD Group)",
   subtitle = "ß = 6.22, p = 1.96 x 10^9",
-  caption = "12 month timepoint",
+  caption = "3 month timepoint",
   results.subtitle = F,
   marginal = F
 ) + 
