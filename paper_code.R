@@ -1,43 +1,41 @@
 ############################################################################
 ############################################################################
-##########################      SET UP       ###############################
+#########################      SET UP     ##################################
 ############################################################################
 ############################################################################
-##### Set up ####
-# The data used in these analyses are publicly available at DIETFITS' 
-# Open Science Framework repository.
+##### Package upload ####
+# Data are openly available at DIETFITS' Open Science Framework repository.
 
 # This code downloads automatically (no need to save the data file).
 
-# Address correspondence about this code to adrian.sotom@tec.mx
+# Address all correspondence about this code to adrian.sotom@tec.mx
 
-# Note: Some graphs were edited in our reanalysis paper for readability.
+# Note: Some graphs were edited in the paper to improve readability.
 
 # If you are only interested in corroborating our results and figures, just 
 # click "Ctrl + Shift + Enter" and get a coffee (results will take several
 # minutes).
 
-# If you want to run the code line by line, make sure to use
-# the same package versions. Run lines 35- 46 in this code to ensure
-# the correct versions are running.
+# If you want to run the code line by line, please, make sure you ar using
+# the same package versions. It is highly recommended to run lines 1- 37
+# lines in this code to ensure it.
 
 #Working directory setup
 setwd("C:/Users/adria/Dropbox/UIEM/LEAD/Proyectos/DIETFITS")
 
-# Since "easystats" is currently not available in CRAN, install manually if you
-# don't already have it.
-
+# Since "easystats" is currently not available in CRAN, if you don't have it,
+# you'll need to install manually.
 # install.packages("easystats", repos = "https://easystats.r-universe.dev")
 
-# Now, confirm you have "pacman" installed. If you don't have it, 
-# remove the "#" in the line below and press "Enter".
+# Now, confirm you have "pacman" installed. If you don't have "pacman" but want
+# to install it, remove the # in the line below and press "Enter".
 # install.packages("pacman") 
 
 #Packages setup
 pacman::p_load(dplyr,tidyr,ggstatsplot,readxl,tableone,easystats,dagitty,lme4,
-               patchwork,MASS,see,qqplotr,bootStepAIC,performance,ggdag,multcomp,
-               rpart,rpart.plot,gtools,broom,lmtest,visdat,report,beepr,Rmisc,
-               parameters,ggcharts,conflicted,car,rattle,cvms,lavaan,
+               reshape2,emmeans,patchwork,MASS,see,qqplotr,bootStepAIC,performance,
+               multcomp,rpart,rpart.plot,gtools,broom,lmtest,visdat,report,Rmisc,
+               parameters,ggcharts,conflicted,car,rattle,cvms,lavaan,broom.mixed,
                missForest,mlogit,MLmetrics,beepr,readr,haven,dagitty,mediation)
 library(mice)
 
@@ -45,8 +43,354 @@ library(mice)
 conflict_prefer("select","dplyr")
 conflict_prefer("filter", "dplyr")
 conflict_prefer("mutate", "dplyr")
-conflict_prefer("arrange", "dplyr")
 
+############################################################################
+##### Data upload ####
+data <- read.csv(url("https://osf.io/ztysq/download"))
+
+############################################################################
+############################################################################
+################   REPLICATING DIETFITS' RESULTS   #########################
+############################################################################
+############################################################################
+##### Weight loss results (1st row, Table 3 from Gardner, et al.) #####
+# For comparison see the 1st row of Table 3 available at:
+# https://jamanetwork.com/journals/jama/fullarticle/2673150
+
+# The next lines of code come from line 204 - 213 in the original code publicly 
+# available at: https://osf.io/zneu5
+contrast.matrix  <-  rbind("HLF12" =  c(0, 0, 0, 1, 0, 0, 0, 1),
+                           "HLC12" =  c(0, 0, 0, 1, 0, 0, 0, 0),
+                           "diff12" = c(0, 0, 0, 0, 0, 0, 0, 1))
+
+om <-  lmer(weight_gcrc ~ time*diet +(1|study_id), data=data)
+
+# The lower 95%CI for weight differences between groups crosses zero.
+confint(glht(om, contrast.matrix))
+
+# Obtaining the estimated mean of weight loss per diet (kg).
+omemm <- emmeans::emmeans(om, ~ diet | time)
+pairs(omemm,by="diet")
+
+# Obtaining the mean of the difference in weight loss per diet (kg).
+pairs(pairs(omemm),by=NULL, adjust="none", infer=c(TRUE,TRUE))
+
+############################################################################
+############################################################################
+######################   DATA IMPUTATION   #################################
+############################################################################
+############################################################################
+##### Preparing data for Imputation #####
+# Creating a baseline wieght variable for every time point.
+databl <- data %>% filter(time=="a.BL") %>% 
+  mutate(blw=weight_gcrc) 
+data3 <- data %>% filter(time=="b.3") %>% 
+  mutate(blw=databl$weight_gcrc) 
+data6 <- data %>% filter(time=="c.6") %>%
+  mutate(blw=databl$weight_gcrc) 
+data12 <- data %>% filter(time=="d.12") %>%
+  mutate(blw=databl$weight_gcrc) 
+imp <- bind_rows(data3,data6,data12)
+# Donor variable selection.
+imp <- imp %>% select(study_id,time,diet,scr_gender,blw,GL_glucose,cal,bmi,waist_gcrc,weight_gcrc)
+# Turning time and diet into factors.
+imp$time <- as.factor(imp$time)
+imp$diet <- as.factor(imp$diet)
+# Creating predictor matrix.
+impdf <- mice(imp, maxit=0)
+predM <- impdf$predictorMatrix
+# Specifying we do not want the ID number to inform the imputation algorithm.
+predM[, c("study_id")] <- 0
+
+##### Data Imputation #####
+###LASSO with LR###
+lassolrimputed <- mice(imp, m = 20, maxit = 10,
+                       predictorMatrix = predM,visitSequence = "monotone",
+                       method = "lasso.select.norm",seed = 4321)
+### Checking convergence
+plot(lassolrimputed)
+
+### Building data frame
+lassolrimpdf <- mice::complete(lassolrimputed, action="long")
+
+### Calculating weight loss from baseline with the imputed weights
+lassolrimpdf <- lassolrimpdf %>% mutate(wdiff=weight_gcrc-blw) 
+
+### Checking the distribution of weight loss. E-figure 1. Waterfall plot.
+quantile(lassolrimpdf$wdiff, probs = c(0.01,0.05,0.25,0.5,0.75,0.95,0.99))
+
+### Recoding for figure labels.
+lassolrimpdf <- lassolrimpdf %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "a.BL" ~ "00m",
+                        time == "b.3" ~ "03m",
+                        time == "c.6" ~ "06m",
+                        time == "d.12" ~ "12m"))  
+
+###Predicted Mean Matching###
+pmmimputed <- mice(imp, m = 20,maxit=10,
+                   predictorMatrix = predM,visitSequence = "monotone",
+                   method = "pmm",seed = 4321)
+### Checking convergence
+plot(pmmimputed)
+
+### Building data frame
+pmmimpdf <- mice::complete(pmmimputed, action="long")
+
+### Calculating weight loss from baseline with the imputed weights
+pmmimpdf <- pmmimpdf %>% mutate(wdiff=weight_gcrc-blw)
+
+### Checking the distribution of weight loss. E-figure 1. Waterfall plot.
+quantile(pmmimpdf$wdiff, probs = c(0.01,0.05,0.25,0.5,0.75,0.95,0.99))
+
+### Recoding for figure labels.
+pmmimpdf <- pmmimpdf %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "a.BL" ~ "00m",
+                        time == "b.3" ~ "03m",
+                        time == "c.6" ~ "06m",
+                        time == "d.12" ~ "12m"))  
+
+############################################################################
+####################        NEW MODELS           ###########################
+############################################################################
+##### New models before imputation #####
+# The data set has no weight-difference vs baseline variable so, we need to 
+# create one for every time point. Then, we selected the relevant variables and 
+# re-coded some of them for label consistency in our graphics.
+
+# Please, note these models were left out of the main results. They are shown
+# here a reference point to illustrate how the calculated weight difference 
+# as outcome variable and the baseline weight adjustment impact results.
+data_or_bl <- data %>% filter(time=="a.BL") %>% 
+  mutate(blweight=weight_gcrc) %>% 
+  mutate(weight_change_bl = weight_gcrc-weight_gcrc) %>% 
+  select(diet,blweight,weight_gcrc,weight_change_bl,time,study_id) %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "a.BL" ~ "00m")) 
+colnames(data_or_bl) <- c("Diet","BLweight","CurrWeight","WeightChange","Timepoint","ID")
+
+data_or_3m <- data %>% filter(time=="b.3") %>% 
+  mutate(blweight=data_or_bl$BLweight) %>% 
+  mutate(weight_change_3m = weight_gcrc-blweight) %>% 
+  select(diet,blweight,weight_gcrc,weight_change_3m,time,study_id) %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "b.3" ~ "03m")) 
+colnames(data_or_3m) <- c("Diet","BLweight","CurrWeight","WeightChange","Timepoint","ID")
+
+data_or_6m <- data %>% filter(time=="c.6") %>% 
+  mutate(blweight=data_or_bl$BLweight) %>% 
+  mutate(weight_change_6m = weight_gcrc-blweight) %>% 
+  select(diet,blweight,weight_gcrc,weight_change_6m,time,study_id) %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "c.6" ~ "06m")) 
+colnames(data_or_6m) <- c("Diet","BLweight","CurrWeight","WeightChange","Timepoint","ID")
+
+data_or_12m <- data %>% filter(time=="d.12") %>% 
+  mutate(blweight=data_or_bl$BLweight) %>% 
+  mutate(weight_change_12m = weight_gcrc-blweight) %>% 
+  select(diet,blweight,weight_gcrc,weight_change_12m,time,study_id) %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "d.12" ~ "12m")) 
+colnames(data_or_12m) <- c("Diet","BLweight","CurrWeight","WeightChange","Timepoint","ID")
+
+# Binding data frames with the "WeightChange variable".
+data_or <- bind_rows(data_or_bl,data_or_3m,data_or_6m,data_or_12m)
+
+# Running the total weight baseline adjusted model.
+om2 <-  lmerTest::lmer(CurrWeight ~ BLweight + Timepoint*Diet +(1|ID), data=data_or)
+om2emm <- emmeans(om2, ~ Diet|Timepoint)
+pairs(om2emm,by="Diet")
+pairs(pairs(om2emm),by=NULL, infer = c(TRUE, TRUE), adjust="none")
+
+# Running the weight change model.
+om3 <-  lmerTest::lmer(WeightChange ~ Timepoint*Diet +(1|ID), data=data_or)
+om3emm <- emmeans(om3, ~ Diet|Timepoint)
+summary(om3emm)
+pairs(pairs(om3emm),by=NULL, infer = c(TRUE, TRUE), adjust="none")
+
+# Running the weight change baseline adjusted model.
+om4 <-  lmerTest::lmer(WeightChange ~ BLweight + Timepoint*Diet +(1|ID), data=data_or)
+om4emm <- emmeans(om4, ~ Diet|Timepoint)
+summary(om4emm)
+pairs(pairs(om4emm),by=NULL, infer = c(TRUE, TRUE), adjust="none")
+
+##### Results after imputation #####
+# Please, note only the baseline weight adjusted models were included in the
+# main results. Their without baseline weight comparisons are included here
+# for reference purposes.
+##### LASSO+LR #####
+lassolr1 <- dlply(lassolrimpdf, ".imp", function(df)
+  lmer(wdiff ~ diet*time + (1|study_id) , data = df))
+lassolr1.pool <- as.mira(lassolr1)
+lassolremm1 <- emmeans::emmeans(lassolr1.pool, ~ diet | time)
+summary(lassolremm1)
+pairs(lassolremm1, by="time", adjust="none", infer=c(TRUE,TRUE))
+
+# Baseline adjusted
+lassolr2 <- dlply(lassolrimpdf, ".imp", function(df)
+  lmer(wdiff ~ blw + diet*time + (1|study_id) , data = df))
+lassolr2.pool <- as.mira(lassolr2)
+lassolremm2 <- emmeans::emmeans(lassolr2.pool, ~ diet | time)
+summary(lassolremm2)
+pairs(lassolremm2, by="time", adjust="none", infer=c(TRUE,TRUE))
+
+##### PMM #####
+pmmomdl1 <- dlply(pmmimpdf, ".imp", function(df)
+  lmer(wdiff ~ diet*time + (1|study_id) , data = df))
+pmmomdl1.pool <- as.mira(pmmomdl1)
+pmmemm1 <- emmeans::emmeans(pmmomdl1.pool, ~ diet | time)
+summary(pmmemm1)
+pairs(pmmemm1, by="time", adjust="none", infer=c(TRUE,TRUE))
+
+# Baseline adjusted
+pmmomdl2 <- dlply(pmmimpdf, ".imp", function(df)
+  lmer(wdiff ~ blw + diet*time + (1|study_id) , data = df))
+pmmomdl2.pool <- as.mira(pmmomdl2)
+pmmemm2 <- emmeans::emmeans(pmmomdl2.pool, ~ diet | time)
+summary(pmmemm2)
+pairs(pmmemm2, by="time", adjust="none", infer=c(TRUE,TRUE))
+
+############################################################################
+############################################################################
+##### FIGURE 1. Weight Differences with and without imputation #####
+##### Panel A. Original model without imputation. ######
+# Turning the output into a data frame and ordering Timepoint labels.
+# Produced with data from line 73. Data below are to approximate the figure.
+databl <- data %>% filter(time=="a.BL") %>% 
+  mutate(weight_change_bl = weight_gcrc-weight_gcrc) %>% 
+  select(diet,weight_change_bl,time,weight_gcrc) %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "a.BL" ~ "0m",
+                        time == "b.3" ~ "03m",
+                        time == "c.6" ~ "06m",
+                        time == "d.12" ~ "12m")) 
+colnames(databl) <- c("Diet","WeightChange","Timepoint","BLWeight")
+
+data3m <- data %>% filter(time=="b.3") %>% 
+  mutate(weight_change_3m = weight_gcrc-databl$BLWeight) %>% 
+  select(diet,weight_change_3m,time) %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "a.BL" ~ "0m",
+                        time == "b.3" ~ "03m",
+                        time == "c.6" ~ "06m",
+                        time == "d.12" ~ "12m")) 
+colnames(data3m) <- c("Diet","WeightChange","Timepoint")
+
+data6m <- data %>% filter(time=="c.6") %>% 
+  mutate(weight_change_6m = weight_gcrc-databl$BLWeight) %>% 
+  select(diet,weight_change_6m,time) %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "a.BL" ~ "0m",
+                        time == "b.3" ~ "03m",
+                        time == "c.6" ~ "06m",
+                        time == "d.12" ~ "12m")) 
+colnames(data6m) <- c("Diet","WeightChange","Timepoint")
+
+data12m <- data %>% filter(time=="d.12") %>% 
+  mutate(weight_change_12m = weight_gcrc-databl$BLWeight) %>% 
+  select(diet,weight_change_12m,time) %>% 
+  mutate(diet=ifelse(diet=="Blue","LCD","LFD")) %>% 
+  mutate(time=case_when(time == "a.BL" ~ "0m",
+                        time == "b.3" ~ "03m",
+                        time == "c.6" ~ "06m",
+                        time == "d.12" ~ "12m")) 
+colnames(data12m) <- c("Diet","WeightChange","Timepoint")
+
+data_or <- bind_rows(databl,data3m,data6m,data12m)
+dfiga <- summarySE(data_or, measurevar="WeightChange", groupvars=c("Timepoint","Diet"),na.rm = T)
+dfiga$Timepoint <- factor(dfiga$Timepoint, levels=c("0m","03m","06m","12m"))
+pd <- position_dodge(0.1) 
+
+pfiga <- ggplot(dfiga, aes(x=Timepoint, y=WeightChange, colour=Diet, group=Diet)) + 
+  geom_errorbar(aes(ymin=WeightChange-se, ymax=WeightChange+se), colour="black", width=.1, position=pd) +
+  geom_line(position=pd,aes(linetype = Diet), colour="black",size=2) +
+  geom_point(position=pd, colour="black", size=2)
+pfiga <- pfiga+ggtitle("A) Original Model")+
+  xlab("Time (months)")+ylab("Weight change (kg)")+labs(colour="Diet")+theme_classic()
+pfiga <- pfiga+ggplot2::theme(plot.title = element_text(size=22,face = "bold", margin = margin(b=1, unit = "cm")),
+                              plot.title.position = "plot",
+                              plot.subtitle = element_text(size = 20, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
+                              plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
+                              axis.title.x = element_text(size=20, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
+                              axis.title.y = element_text(size=20, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
+                              axis.text = element_text(size=20, colour = "black", face="bold"),
+                              legend.box.margin = margin(l=1,unit = "cm"),
+                              legend.title = element_text(size=20, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
+                              legend.text = element_text(size=20, colour = "black")
+)
+pfiga
+ggsave("Fig1_A.Original model without data imputation.bmp", units="cm", width=30, height=20, dpi=1000)
+
+##### Panel B. LASSO with LR Imputation ######
+dfbl <- dfiga %>% filter(Timepoint=="0m") %>% 
+  select(Diet,Timepoint,WeightChange,se)
+colnames(dfbl) <- c("Diet","Timepoint","WeightChange","SE")
+
+lassolremmdf <- data.frame(lassolremm2) %>% 
+  select(diet,time,emmean,SE)
+colnames(lassolremmdf) <- c("Diet","Timepoint","WeightChange","SE")
+lassolremmdf <- bind_rows(dfbl,lassolremmdf)
+lassolremmdf$Timepoint <- factor(lassolremmdf$Timepoint, levels=c("0m","03m", "06m", "12m"))
+pd <- position_dodge(0.1) 
+
+pfigb <- ggplot(lassolremmdf, aes(x=Timepoint, y=WeightChange, colour=Diet, group=Diet)) + 
+  geom_errorbar(aes(ymin=WeightChange-SE, ymax=WeightChange+SE), colour="black", width=.1, position=pd) +
+  geom_line(position=pd,aes(linetype = Diet), colour="black",size=2) +
+  geom_point(position=pd, colour="black", size=2)
+pfigb <- pfigb+ggtitle("B) Using LASSO with Linear Regression")+
+  xlab("Time (months)")+ylab("Weight change (kg)")+labs(colour="Diet")+theme_classic()
+pfigb <- pfigb+ggplot2::theme(plot.title = element_text(size=22,face = "bold", margin = margin(b=1, unit = "cm")),
+                              plot.title.position = "plot",
+                              plot.subtitle = element_text(size = 20, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
+                              plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
+                              axis.title.x = element_text(size=20, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
+                              axis.title.y = element_text(size=20, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
+                              axis.text = element_text(size=20, colour = "black", face="bold"),
+                              legend.box.margin = margin(l=1,unit = "cm"),
+                              legend.title = element_text(size=20, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
+                              legend.text = element_text(size=20, colour = "black")
+)
+pfigb
+ggsave("Fig1_B.Weight change with lassolr.bmp", units="cm", width=30, height=20, dpi=1000)
+
+##### Panel C. PMM Imputation ######
+dfbl <- dfiga %>% filter(Timepoint=="0m") %>% 
+  select(Diet,Timepoint,WeightChange,se)
+colnames(dfbl) <- c("Diet","Timepoint","WeightChange","SE")
+
+pmmemmdf <- data.frame(pmmemm2) %>% 
+  select(diet,time,emmean,SE)
+colnames(pmmemmdf) <- c("Diet","Timepoint","WeightChange","SE")
+pmmemmdf <- bind_rows(dfbl,pmmemmdf)
+pmmemmdf$Timepoint <- factor(pmmemmdf$Timepoint, levels=c("0m","03m", "06m", "12m"))
+pd <- position_dodge(0.1) 
+
+pfigc <- ggplot(pmmemmdf, aes(x=Timepoint, y=WeightChange, colour=Diet, group=Diet)) + 
+  geom_errorbar(aes(ymin=WeightChange-SE, ymax=WeightChange+SE), colour="black", width=.1, position=pd) +
+  geom_line(position=pd,aes(linetype = Diet), colour="black",size=2) +
+  geom_point(position=pd, colour="black", size=2)
+pfigc <- pfigc+ggtitle("C) Using Predicted Mean Matching")+
+  xlab("Time (months)")+ylab("Weight change (kg)")+labs(colour="Diet")+theme_classic()
+pfigc <- pfigc+ggplot2::theme(plot.title = element_text(size=22,face = "bold", margin = margin(b=1, unit = "cm")),
+                              plot.title.position = "plot",
+                              plot.subtitle = element_text(size = 20, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
+                              plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
+                              axis.title.x = element_text(size=20, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
+                              axis.title.y = element_text(size=20, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
+                              axis.text = element_text(size=20, colour = "black", face="bold"),
+                              legend.box.margin = margin(l=1,unit = "cm"),
+                              legend.title = element_text(size=20, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
+                              legend.text = element_text(size=20, colour = "black")
+)
+pfigc
+ggsave("Fig1_C.Weight change with PMM.bmp", units="cm", width=30, height=20, dpi=1000)
+
+############################################################################
+############################################################################
+####################   EVIDENCE SUPPORTING THE CIM #########################
+############################################################################
+############################################################################
 ##### Data Upload ####
 data <- read.csv(url("https://osf.io/ztysq/download"))
 
@@ -325,194 +669,8 @@ lcd <- data %>% filter(diet=="LCD")
 lfd <- data %>% filter(diet=="LFD")
 ############################################################################
 ############################################################################
-#####################      DATA IMPUTATION       ###########################
-############################################################################
-############################################################################
-##### Preparing Data #####
-# To examine effect modification, we first created a Boolean variable (q5insGLr).
-# Then, to impute data, Boolean and character variables need to defined as factors.
-data_3m$diet <- as.factor(data_12m$diet)
-data_3m$timepoint <- as.factor(data_3m$timepoint)
-data_3m$q5insGLr <- as.factor(data_12m$q5insGLr)
-data_6m$diet <- as.factor(data_6m$diet)
-data_6m$timepoint <- as.factor(data_6m$timepoint)
-data_6m$q5insGLr <- as.factor(data_6m$q5insGLr)
-data_12m$diet <- as.factor(data_12m$diet)
-data_12m$timepoint <- as.factor(data_12m$timepoint)
-data_12m$q5insGLr <- as.factor(data_12m$q5insGLr)
-
-
-# Selecting informative variables for informing the algorithm.
-data_3m_imp <- data_3m %>% select(diet,cal,carb..,bmi,scr_gender,q5insGLr,
-                                  fat..,fiber.g,weight_change_3m,baseline_ins,
-                                  delta_GL_3m,delta_weight_3m,bl_bmi,bl_GI,timepoint)
-
-data_6m_imp <- data_6m %>% select(diet,cal,carb..,bmi,scr_gender,q5insGLr,
-                                  fat..,fiber.g,weight_change_6m,baseline_ins,
-                                  delta_GL_6m,delta_weight_6m,bl_bmi,bl_GI,timepoint)
-
-data_12m_imp <- data_12m %>% select(diet,cal,carb..,bmi,scr_gender,q5insGLr,
-                                    fat..,fiber.g,weight_change_12m,baseline_ins,
-                                    delta_GL_12m,delta_weight_12m,bl_bmi,bl_GI,timepoint)
-
-##### Data imputation with random forests #####
-set.seed(4321)
-imp3m <- missForest(data_3m_imp)
-set.seed(4321)
-imp6m <- missForest(data_6m_imp)
-set.seed(4321)
-imp12m <- missForest(data_12m_imp)
-
-data_3m_rf <- as.data.frame(imp3m$ximp)
-data_6m_rf <- as.data.frame(imp6m$ximp)
-data_12m_rf <- as.data.frame(imp12m$ximp)
-
-##### Data imputation MICE (Multiple Imputation with Chained Equations) #####
-data_3m_mice_m <- mice(data_3m_imp,m=5,seed = 4321)
-data_6m_mice_m <- mice(data_6m_imp,m=5, seed = 4321)
-data_12m_mice_m <- mice(data_12m_imp,m=5, seed = 4321)
-
-data_3m_mice <- complete(data_3m_mice_m,1)
-data_6m_mice <- complete(data_6m_mice_m,1)
-data_12m_mice <- complete(data_12m_mice_m,1)
-
-
-##### Weight loss between groups after data imputation #####
-# Evaluating weight differences between diet groups with and w/o Data Imputation.
-# This calculation produces p-values. Mean weigth loss is obtained below.
-kruskal.test(g=data_3m$diet,x=data_3m$weight_change_3m)
-kruskal.test(g=data_6m$diet,x=data_6m$weight_change_6m)
-kruskal.test(g=data_12m$diet,x=data_12m$weight_change_12m)
-kruskal.test(g=data_3m_rf$diet,x=data_3m_rf$weight_change_3m)
-kruskal.test(g=data_6m_rf$diet,x=data_6m_rf$weight_change_6m)
-kruskal.test(g=data_12m_rf$diet,x=data_12m_rf$weight_change_12m)
-kruskal.test(g=data_3m_mice$diet,x=data_3m_mice$weight_change_3m)
-kruskal.test(g=data_6m_mice$diet,x=data_6m_mice$weight_change_6m)
-kruskal.test(g=data_12m_mice$diet,x=data_12m_mice$weight_change_12m)
-
-# Evaluating effect modification.
-emm5q_12m_rf <-  lm(weight_change_12m~q5insGLr,data=data_12m_rf)
-summary(emm5q_12m_rf)
-emm5q_12m_mice <-  lm(weight_change_12m~q5insGLr,data=data_12m_mice)
-summary(emm5q_12m_mice)
-
-
-############################################################################
-##### FIGURE 1. Weight Differences with and without imputation #####
-##### Panel A. Without imputation ######
-data_or_bl <- data_bl %>% select(diet,weight_change_bl,timepoint)
-colnames(data_or_bl) <- c("Diet","WeightChange","Timepoint")
-data_or_3m <- data_3m %>% select(diet,weight_change_3m,timepoint)
-colnames(data_or_3m) <- c("Diet","WeightChange","Timepoint")
-data_or_6m <- data_6m %>% select(diet,weight_change_6m,timepoint)
-colnames(data_or_6m) <- c("Diet","WeightChange","Timepoint")
-data_or_12m <- data_12m %>% select(diet,weight_change_12m,timepoint)
-colnames(data_or_12m) <- c("Diet","WeightChange","Timepoint")
-data_or <- bind_rows(data_or_bl,data_or_3m,data_or_6m,data_or_12m)
-
-
-dfiga <- summarySE(data_or, measurevar="WeightChange", groupvars=c("Timepoint","Diet"),na.rm = T)
-# Mean weight loss can be obtained here.
-view(dfiga)
-
-dfiga$Timepoint <- factor(dfiga$Timepoint, levels=c("Baseline","3m", "6m", "12m"))
-pd <- position_dodge(0.1) 
-pfiga <- ggplot(dfiga, aes(x=Timepoint, y=WeightChange, colour=Diet, group=Diet)) + 
-  geom_errorbar(aes(ymin=WeightChange-se, ymax=WeightChange+se), colour="black", width=.1, position=pd) +
-  geom_line(position=pd,aes(linetype = Diet), colour="black",size=2) +
-  geom_point(position=pd, colour="black", size=4)
-pfiga <- pfiga+ggtitle("A) Without Imputation")+
-  xlab("Time (months)")+ylab("Weight change (kg)")+labs(colour="Diet")+theme_classic()
-pfiga <- pfiga+ggplot2::theme(plot.title = element_text(size=22,face = "bold", margin = margin(b=1, unit = "cm")),
-                              plot.title.position = "plot",
-                              plot.subtitle = element_text(size = 20, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
-                              plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
-                              axis.title.x = element_text(size=20, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
-                              axis.title.y = element_text(size=20, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
-                              axis.text = element_text(size=20, colour = "black", face="bold"),
-                              legend.box.margin = margin(l=1,unit = "cm"),
-                              legend.title = element_text(size=20, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
-                              legend.text = element_text(size=20, colour = "black")
-)
-pfiga
-ggsave("Fig1_A.Weight change without data imputation.bmp", units="cm", width=30, height=20, dpi=1000)
-
-##### Panel B. Random Forest Imputation ######
-data_3m_rf <- data_3m_rf %>% select(diet,weight_change_3m,timepoint)
-colnames(data_3m_rf) <- c("Diet","WeightChange","Timepoint")
-data_6m_rf <- data_6m_rf %>% select(diet,weight_change_6m,timepoint)
-colnames(data_6m_rf) <- c("Diet","WeightChange","Timepoint")
-data_12m_rf <- data_12m_rf %>% select(diet,weight_change_12m,timepoint)
-colnames(data_12m_rf) <- c("Diet","WeightChange","Timepoint")
-data_rf <- bind_rows(data_or_bl,data_3m_rf,data_6m_rf,data_12m_rf)
-
-
-dfigb <- summarySE(data_rf, measurevar="WeightChange", groupvars=c("Timepoint","Diet"),na.rm = T)
-# Mean weight loss can be obtained here.
-view(dfigb)
-
-dfigb$Timepoint <- factor(dfigb$Timepoint, levels=c("Baseline","3m", "6m", "12m"))
-pd <- position_dodge(0.1) 
-pfigb <- ggplot(dfigb, aes(x=Timepoint, y=WeightChange, colour=Diet, group=Diet)) + 
-  geom_errorbar(aes(ymin=WeightChange-se, ymax=WeightChange+se), colour="black", width=.1, position=pd) +
-  geom_line(position=pd,aes(linetype = Diet), colour="black",size=2) +
-  geom_point(position=pd, colour="black", size=4)
-pfigb <- pfigb+ggtitle("B) With Imputation Using Random Forest Method")+
-  xlab("Time (months)")+ylab("Weight change (kg)")+labs(colour="Diet")+theme_classic()
-pfigb <- pfigb+ggplot2::theme(plot.title = element_text(size=22,face = "bold", margin = margin(b=1, unit = "cm")),
-                              plot.title.position = "plot",
-                              plot.subtitle = element_text(size = 20, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
-                              plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
-                              axis.title.x = element_text(size=20, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
-                              axis.title.y = element_text(size=20, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
-                              axis.text = element_text(size=20, colour = "black", face="bold"),
-                              legend.box.margin = margin(l=1,unit = "cm"),
-                              legend.title = element_text(size=20, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
-                              legend.text = element_text(size=20, colour = "black")
-)
-pfigb
-ggsave("Fig1_B.Weight change with random forest.bmp", units="cm", width=30, height=20, dpi=1000)
-
-##### Panel C. MICE Imputation ######
-data_3m_mice <- data_3m_mice %>% select(diet,weight_change_3m,timepoint)
-colnames(data_3m_mice) <- c("Diet","WeightChange","Timepoint")
-data_6m_mice <- data_6m_mice %>% select(diet,weight_change_6m,timepoint)
-colnames(data_6m_mice) <- c("Diet","WeightChange","Timepoint")
-data_12m_mice <- data_12m_mice %>% select(diet,weight_change_12m,timepoint)
-colnames(data_12m_mice) <- c("Diet","WeightChange","Timepoint")
-data_mice <- bind_rows(data_or_bl,data_3m_mice,data_6m_mice,data_12m_mice)
-
-
-dfigc <- summarySE(data_mice, measurevar="WeightChange", groupvars=c("Timepoint","Diet"),na.rm = T)
-# Mean weight loss can be obtained here.
-view(dfigc)
-
-dfigc$Timepoint <- factor(dfigc$Timepoint, levels=c("Baseline","3m", "6m", "12m"))
-pd <- position_dodge(0.1) 
-pfigc <- ggplot(dfigc, aes(x=Timepoint, y=WeightChange, colour=Diet, group=Diet)) + 
-  geom_errorbar(aes(ymin=WeightChange-se, ymax=WeightChange+se), colour="black", width=.1, position=pd) +
-  geom_line(position=pd,aes(linetype = Diet), colour="black",size=2) +
-  geom_point(position=pd, colour="black", size=4)
-pfigc <- pfigc+ggtitle("C) With Imputation Using MICE Method")+
-  xlab("Time (months)")+ylab("Weight change (kg)")+labs(colour="Diet")+theme_classic()
-pfigc <- pfigc+ggplot2::theme(plot.title = element_text(size=22,face = "bold", margin = margin(b=1, unit = "cm")),
-                              plot.title.position = "plot",
-                              plot.subtitle = element_text(size = 20, face="bold.italic" ,margin = margin(b=1,unit = "cm")),
-                              plot.margin = margin(t=1,b=1,l=1,r=1,unit = "cm"),
-                              axis.title.x = element_text(size=20, colour = "black",face="bold",margin = margin(t=1,unit = "cm")),
-                              axis.title.y = element_text(size=20, colour = "black",face="bold",margin = margin(r=1,unit = "cm")),
-                              axis.text = element_text(size=20, colour = "black", face="bold"),
-                              legend.box.margin = margin(l=1,unit = "cm"),
-                              legend.title = element_text(size=20, colour = "black",face = "bold",margin = margin(b=0.3,unit = "cm")),
-                              legend.text = element_text(size=20, colour = "black")
-)
-pfigc
-ggsave("Fig1_C.Weight change with MICE.bmp", units="cm", width=30, height=20, dpi=1000)
-
-
-############################################################################
-############################################################################
 ###############   MAIN RESULTS (WITHOUT IMPUTATION)   ######################
+###############   RESULTS CONCERNING 6 & 12 MONTHS    ######################
 ############################################################################
 ############################################################################
 ##### FIGURE 2. Dietary Mediators (3-months) #####
